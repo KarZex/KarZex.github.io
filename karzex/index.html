@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RGB量子化＋HEX出力＋ZIPダウンロード</title>
+    <title>RGB量子化＋4分割＋ZIP＋履歴表示</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
@@ -46,12 +46,42 @@
 
         h3 {
             font-size: 1.1rem;
-            margin-top: 24px;
-            margin-bottom: 8px;
+            margin-top: 28px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        /* ファイル入力エリア */
+        /* フォーム設定 */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .input-text {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+        }
+
+        .input-text:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
         .file-upload-wrapper {
+            margin-top: 12px;
             margin-bottom: 20px;
         }
 
@@ -77,7 +107,7 @@
         /* Canvas (画像表示エリア) */
         .preview-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
             margin-bottom: 20px;
         }
@@ -92,37 +122,20 @@
 
         .preview-card h4 {
             margin: 0 0 10px 0;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: #64748b;
         }
 
         canvas {
-            max-width: 100%;
-            height: auto;
             border-radius: 4px;
             border: 1px solid var(--border-color);
             background-color: #fff;
-        }
-
-        /* テキストエリア */
-        textarea {
-            width: 100%;
-            height: 200px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.85rem;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            box-sizing: border-box;
-            resize: vertical;
-            background-color: #0f172a;
-            color: #38bdf8;
+            image-rendering: pixelated; /* ドット絵がボヤけない処理 */
         }
 
         /* ダウンロードボタン */
         .btn-download {
             display: inline-block;
-            margin-top: 16px;
             padding: 12px 24px;
             background-color: #10b981;
             color: white;
@@ -138,47 +151,89 @@
         .btn-download:hover {
             background-color: #059669;
         }
+
+        /* 履歴（処理済み一覧）ギャラリー */
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .history-item {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .history-item .title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            word-break: break-all;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        .history-item img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: #fff;
+            image-rendering: pixelated;
+        }
     </style>
 </head>
 
 <body>
 
     <div class="container">
-        <h2>RGB量子化（9値）＋ HEX出力</h2>
+        <h2>RGB量子化（9値）＋ 4分割 ＋ ZIPダウンロード</h2>
+
+        <div class="form-group">
+            <label for="filename">保存するファイル名（拡張子不要）</label>
+            <input type="text" id="filename" class="input-text" placeholder="例：image1">
+        </div>
 
         <div class="file-upload-wrapper">
-            <label for="fileInput" class="file-label">画像ファイルを選択</label>
+            <label for="fileInput" class="file-label">画像を選択して追加</label>
             <input type="file" id="fileInput" accept="image/*">
         </div>
 
         <div class="preview-grid">
             <div class="preview-card">
-                <h4>元画像</h4>
+                <h4>元画像 (128x128)</h4>
                 <canvas id="canvasOriginal"></canvas>
             </div>
             <div class="preview-card">
-                <h4>量子化後</h4>
+                <h4>量子化後 (128x128)</h4>
                 <canvas id="canvasQuantized"></canvas>
             </div>
         </div>
 
-        <h3>量子化後のピクセルデータ（HEX）</h3>
-        <textarea id="pixelData" readonly placeholder="画像を選択するとデータが表示されます"></textarea>
-
         <button id="downloadZip" class="btn-download">ZIPダウンロード</button>
+
+        <h3>処理済みファイル一覧</h3>
+        <div id="history" class="history-grid"></div>
     </div>
 
     <script>
         const levels = [0, 32, 64, 96, 128, 160, 192, 224, 255];
-        let generatedText = "";  // ZIPに入れる内容
+        const zip = new JSZip();
+        const folder = zip.folder("test");
+        const historyDiv = document.getElementById("history");
 
-        function quantize(value) {
+        function quantize(v) {
             let best = levels[0];
-            let minDist = Math.abs(value - best);
+            let min = Math.abs(v - best);
             for (let lv of levels) {
-                const d = Math.abs(value - lv);
-                if (d < minDist) {
-                    minDist = d;
+                const d = Math.abs(v - lv);
+                if (d < min) {
+                    min = d;
                     best = lv;
                 }
             }
@@ -189,70 +244,95 @@
             return v.toString(16).padStart(2, "0");
         }
 
+        function extractBlock(data, w, h, xs, xe, ys, ye) {
+            let out = "";
+            for (let y = ys; y <= ye; y++) {
+                for (let x = xs; x <= xe; x++) {
+                    const i = (y * w + x) * 4;
+                    const r = quantize(data[i]);
+                    const g = quantize(data[i + 1]);
+                    const b = quantize(data[i + 2]);
+                    const hex = toHex(r) + toHex(g) + toHex(b);
+                    out += `X:${x}Y:${y},${hex}\n`;
+                }
+            }
+            return out;
+        }
+
         document.getElementById("fileInput").addEventListener("change", function (e) {
             const file = e.target.files[0];
             if (!file) return;
 
+            const name = document.getElementById("filename").value.trim();
+            if (!name) {
+                alert("先にファイル名を入力してください");
+                this.value = ""; // 選択をリセット
+                return;
+            }
+
             const img = new Image();
             img.onload = function () {
-                const w = img.width;
-                const h = img.height;
+
+                const w = 128, h = 128;
 
                 const c0 = document.getElementById("canvasOriginal");
-                c0.width = w;
-                c0.height = h;
+                c0.width = w; c0.height = h;
                 const ctx0 = c0.getContext("2d");
-                ctx0.drawImage(img, 0, 0);
+                ctx0.drawImage(img, 0, 0, w, h);
 
                 const c1 = document.getElementById("canvasQuantized");
-                c1.width = w;
-                c1.height = h;
+                c1.width = w; c1.height = h;
                 const ctx1 = c1.getContext("2d");
 
                 const imgData = ctx0.getImageData(0, 0, w, h);
                 const data = imgData.data;
 
-                let output = "";
-
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        const i = (y * w + x) * 4;
-
-                        const r = quantize(data[i]);
-                        const g = quantize(data[i + 1]);
-                        const b = quantize(data[i + 2]);
-
-                        data[i] = r;
-                        data[i + 1] = g;
-                        data[i + 2] = b;
-
-                        const hex = toHex(r) + toHex(g) + toHex(b);
-
-                        output += `X:${x}Y:${y},${hex}\n`;
-                    }
+                // 量子化して表示
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = quantize(data[i]);
+                    data[i + 1] = quantize(data[i + 1]);
+                    data[i + 2] = quantize(data[i + 2]);
                 }
-
                 ctx1.putImageData(imgData, 0, 0);
 
-                document.getElementById("pixelData").value = output;
-                generatedText = output;  // ZIP用に保存
+                // ★ 4分割ファイル生成
+                const f1 = extractBlock(data, w, h, 0, 63, 0, 63);
+                const f2 = extractBlock(data, w, h, 64, 127, 0, 63);
+                const f3 = extractBlock(data, w, h, 0, 63, 64, 127);
+                const f4 = extractBlock(data, w, h, 64, 127, 64, 127);
+
+                folder.file(`${name}_x0y0.txt`, f1);
+                folder.file(`${name}_x64y0.txt`, f2);
+                folder.file(`${name}_x0y64.txt`, f3);
+                folder.file(`${name}_x64y64.txt`, f4);
+
+                // 履歴表示
+                const item = document.createElement("div");
+                item.className = "history-item";
+
+                const title = document.createElement("div");
+                title.className = "title";
+                title.textContent = name;
+
+                const imgElem = document.createElement("img");
+                imgElem.src = c1.toDataURL();
+
+                item.appendChild(title);
+                item.appendChild(imgElem);
+                historyDiv.appendChild(item);
+
+                // 入力フィールドとファイル選択をクリア
+                document.getElementById("filename").value = "";
+                document.getElementById("fileInput").value = "";
+
+                alert(`"${name}" の 4分割ファイルを test/ に追加しました`);
             };
 
             img.src = URL.createObjectURL(file);
         });
 
-        // ZIP生成＋ダウンロード
+        // ZIPダウンロード
         document.getElementById("downloadZip").addEventListener("click", function () {
-            if (!generatedText) {
-                alert("先に画像を量子化してください");
-                return;
-            }
-
-            const zip = new JSZip();
-            const folder = zip.folder("test");  // testフォルダを作成
-
-            folder.file("quantized.txt", generatedText);  // ファイルを追加
-
             zip.generateAsync({ type: "blob" }).then(function (content) {
                 const a = document.createElement("a");
                 a.href = URL.createObjectURL(content);
