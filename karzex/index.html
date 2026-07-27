@@ -3,37 +3,170 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RGB量子化＋HEX出力＋ZIPダウンロード</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+
+        /* ファイル入力エリア */
+        .file-upload-wrapper {
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .file-label:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Canvas (画像表示エリア) */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .preview-card {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-card h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.95rem;
+            color: #64748b;
         }
 
         canvas {
-            border: 1px solid #333;
-            margin: 10px;
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: #fff;
         }
 
+        /* テキストエリア */
         textarea {
-            width: 600px;
-            height: 300px;
+            width: 100%;
+            height: 200px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            resize: vertical;
+            background-color: #0f172a;
+            color: #38bdf8;
+        }
+
+        /* ダウンロードボタン */
+        .btn-download {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 12px 24px;
+            background-color: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+
+        .btn-download:hover {
+            background-color: #059669;
         }
     </style>
 </head>
 
 <body>
 
-    <h2>RGB量子化（9値）＋ HEX出力 ＋ ZIPダウンロード</h2>
-    <input type="file" id="fileInput" accept="image/*"><br>
+    <div class="container">
+        <h2>RGB量子化（9値）＋ HEX出力</h2>
 
-    <canvas id="canvasOriginal"></canvas>
-    <canvas id="canvasQuantized"></canvas>
+        <div class="file-upload-wrapper">
+            <label for="fileInput" class="file-label">画像ファイルを選択</label>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
 
-    <h3>量子化後のピクセルデータ（HEX）</h3>
-    <textarea id="pixelData"></textarea><br>
+        <div class="preview-grid">
+            <div class="preview-card">
+                <h4>元画像</h4>
+                <canvas id="canvasOriginal"></canvas>
+            </div>
+            <div class="preview-card">
+                <h4>量子化後</h4>
+                <canvas id="canvasQuantized"></canvas>
+            </div>
+        </div>
 
-    <button id="downloadZip">ZIPダウンロード</button>
+        <h3>量子化後のピクセルデータ（HEX）</h3>
+        <textarea id="pixelData" readonly placeholder="画像を選択するとデータが表示されます"></textarea>
+
+        <button id="downloadZip" class="btn-download">ZIPダウンロード</button>
+    </div>
 
     <script>
         const levels = [0, 32, 64, 96, 128, 160, 192, 224, 255];
